@@ -29,10 +29,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Go 1.22
+      - name: Set up Go 1.24.2
         uses: actions/setup-go@v5
         with:
-          go-version: '1.22'
+          go-version: '1.24.2'
           check-latest: true
           cache: true
 
@@ -41,7 +41,9 @@ jobs:
         run: |
           go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
           ENVTEST_VERSION=1.32
-          echo "KUBEBUILDER_ASSETS=$(setup-envtest use ${ENVTEST_VERSION} -p path)" >> $GITHUB_ENV
+          ENVTEST_PATH=$(setup-envtest use ${ENVTEST_VERSION} -p path)
+          echo "KUBEBUILDER_ASSETS=${ENVTEST_PATH}" >> $GITHUB_ENV
+          echo "envtest_assets=${ENVTEST_PATH}" >> $GITHUB_OUTPUT
 
       - name: Run tests with race detector (amd64)
         if: matrix.arch == 'amd64'
@@ -126,10 +128,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Go 1.22
+      - name: Set up Go 1.24.2
         uses: actions/setup-go@v5
         with:
-          go-version: '1.22'
+          go-version: '1.24.2'
 
       - name: Install k6
         run: |
@@ -144,11 +146,14 @@ jobs:
           chmod +x ./kind
           sudo mv ./kind /usr/local/bin/kind
 
-      - name: Setup envtest
+      - name: Install setup-envtest and download binaries
         id: setup-envtest
-        uses: kubernetes-sigs/setup-envtest@v2
-        with:
-          version: '1.32'
+        run: |
+          go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
+          ENVTEST_VERSION=1.32
+          ENVTEST_PATH=$(setup-envtest use ${ENVTEST_VERSION} -p path)
+          echo "KUBEBUILDER_ASSETS=${ENVTEST_PATH}" >> $GITHUB_ENV
+          echo "envtest_assets=${ENVTEST_PATH}" >> $GITHUB_OUTPUT
 
       - name: Run soak test (5min)
         run: |
@@ -188,15 +193,18 @@ jobs:
 
       - name: Install Kind
         run: |
-          curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.20.0/kind-linux-amd64
+          curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.27.0/kind-linux-amd64
           chmod +x ./kind
           sudo mv ./kind /usr/local/bin/kind
 
-      - name: Setup envtest
+      - name: Install setup-envtest and download binaries
         id: setup-envtest
-        uses: kubernetes-sigs/setup-envtest@v2
-        with:
-          version: '1.32'
+        run: |
+          go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
+          ENVTEST_VERSION=1.32
+          ENVTEST_PATH=$(setup-envtest use ${ENVTEST_VERSION} -p path)
+          echo "KUBEBUILDER_ASSETS=${ENVTEST_PATH}" >> $GITHUB_ENV
+          echo "envtest_assets=${ENVTEST_PATH}" >> $GITHUB_OUTPUT
 
       - name: Run full soak test (24h)
         run: |
