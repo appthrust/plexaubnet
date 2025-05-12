@@ -70,7 +70,7 @@ jobs:
     name: Smoke Test (5min)
     needs: race-test
     runs-on: ubuntu-latest
-    # PRと通常pushでは最初に短時間のスモークテストを実行
+    # Run a short smoke test first for PRs and regular pushes
     if: github.event_name == 'push' || github.event_name == 'pull_request'
 
     steps:
@@ -97,9 +97,9 @@ jobs:
 
       - name: Setup envtest
         id: setup-envtest
-        uses: kubernetes-sigs/setup-envtest@v1
+        uses: kubernetes-sigs/setup-envtest@v2
         with:
-          version: 'v1.32.0'
+          version: '1.32'
 
       - name: Run smoke test (5min)
         run: |
@@ -119,7 +119,7 @@ jobs:
     name: Soak Test (5min)
     needs: [race-test, smoke-test]
     runs-on: ubuntu-latest
-    # スモークテスト成功後に実行する短時間ソークテスト
+    # Run after smoke test succeeds
     if: github.event_name == 'push' || github.event_name == 'pull_request'
 
     steps:
@@ -146,9 +146,9 @@ jobs:
 
       - name: Setup envtest
         id: setup-envtest
-        uses: kubernetes-sigs/setup-envtest@v1
+        uses: kubernetes-sigs/setup-envtest@v2
         with:
-          version: 'v1.32.0'
+          version: '1.32'
 
       - name: Run soak test (5min)
         run: |
@@ -167,7 +167,7 @@ jobs:
   soak-test-full:
     name: Full Soak Test (24h)
     runs-on: ubuntu-latest
-    # 手動トリガー、かつsoakパラメータがtrueの場合のみ実行
+    # Only run when manually triggered and soak parameter is true
     if: github.event_name == 'workflow_dispatch' && inputs.soak == 'true'
 
     steps:
@@ -194,9 +194,9 @@ jobs:
 
       - name: Setup envtest
         id: setup-envtest
-        uses: kubernetes-sigs/setup-envtest@v1
+        uses: kubernetes-sigs/setup-envtest@v2
         with:
-          version: 'v1.32.0'
+          version: '1.32'
 
       - name: Run full soak test (24h)
         run: |

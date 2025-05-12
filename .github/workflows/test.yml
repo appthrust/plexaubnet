@@ -53,11 +53,11 @@ jobs:
 
     - name: Check coverage threshold
       run: |
-        # 合計カバレッジを取得
+        # Get total coverage
         COVERAGE=$(go tool cover -func=coverage.out | grep total: | awk '{print $3}' | sed 's/%//')
         echo "Total coverage: ${COVERAGE}%"
         
-        # 閾値と比較 (60%)
+        # Compare with threshold (60%)
         THRESHOLD=60
         if (( $(echo "$COVERAGE < $THRESHOLD" | awk '{print ($1 < $3)}') )); then
           echo "Error: Coverage ${COVERAGE}% is below the threshold of ${THRESHOLD}%"
@@ -76,8 +76,8 @@ jobs:
     - name: Check for flaky tests
       run: |
         echo "::notice::Running flaky test detection..."
-        # 非同期テストによるタイミング依存性を検出するため -count=5 を使用
-        # エラーが発生した場合、フレーキーテストとしてGitHub issue作成を推奨
+        # Using -count=5 to detect timing dependencies in asynchronous tests
+        # If errors occur, it's recommended to create a GitHub issue for flaky tests
         go test -count=5 ./internal/controller/... || echo "::warning::Potential flaky tests detected, consider creating a GitHub issue"
       env:
         KUBEBUILDER_ASSETS: ${{ env.KUBEBUILDER_ASSETS }}
