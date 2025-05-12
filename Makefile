@@ -82,7 +82,10 @@ test-race: manifests generate fmt vet setup-envtest ## Run tests with race detec
 # Generate coverage report (HTML) using the same filtered package list to ensure consistency with CI threshold.
 coverage: manifests generate fmt vet setup-envtest ## Generate coverage report with detailed HTML output.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" \
-		go test $(PACKAGES) -coverprofile=coverage.out -covermode=atomic
+		# '-p 1' runs the listed packages serially instead of in parallel. This prevents the tests from
+		# starting multiple envtest (kube-apiserver / etcd) instances at the same time which can exhaust
+		# the limited memory/CPU available on GitHub runners and result in the job being cancelled.
+		go test -p 1 $(PACKAGES) -coverprofile=coverage.out -covermode=atomic
 	go tool cover -html=coverage.out -o coverage.html
 
 # TODO(user): To use a different vendor for e2e tests, modify the setup under 'tests/e2e'.
