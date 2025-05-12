@@ -36,11 +36,12 @@ jobs:
           check-latest: true
           cache: true
 
-      - name: Setup envtest
+      - name: Install setup-envtest and download binaries
         id: setup-envtest
-        uses: kubernetes-sigs/setup-envtest@v1
-        with:
-          version: 'v1.32.0'
+        run: |
+          go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
+          ENVTEST_VERSION=1.32
+          echo "KUBEBUILDER_ASSETS=$(setup-envtest use ${ENVTEST_VERSION} -p path)" >> $GITHUB_ENV
 
       - name: Run tests with race detector (amd64)
         if: matrix.arch == 'amd64'
