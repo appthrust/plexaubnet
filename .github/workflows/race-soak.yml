@@ -1,0 +1,219 @@
+name: Race Detection & Soak Test
+
+on:
+  workflow_dispatch:
+    inputs:
+      soak:
+        description: 'Run full 24h soak test'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+        default: 'false'
+        required: false
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  race-test:
+    name: Race Detector
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [amd64, arm64]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go 1.22
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          check-latest: true
+          cache: true
+
+      - name: Setup envtest
+        id: setup-envtest
+        uses: kubernetes-sigs/setup-envtest@v1
+        with:
+          version: 'v1.32.0'
+
+      - name: Run tests with race detector (amd64)
+        if: matrix.arch == 'amd64'
+        run: |
+          make test-race
+        env:
+          KUBEBUILDER_ASSETS: ${{ steps.setup-envtest.outputs.envtest_assets }}
+
+      - name: Build (compile only) for arm64
+        if: matrix.arch == 'arm64'
+        run: |
+          echo "Compiling packages for linux/arm64 (race detector not executed)"
+          GOOS=linux GOARCH=arm64 go test -c ./...
+        env:
+          KUBEBUILDER_ASSETS: ${{ steps.setup-envtest.outputs.envtest_assets }}
+
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        with:
+          if: matrix.arch == 'amd64'
+          name: coverage-race-linux-amd64
+          path: coverage.out
+          if-no-files-found: warn
+
+  smoke-test:
+    name: Smoke Test (5min)
+    needs: race-test
+    runs-on: ubuntu-latest
+    # PRと通常pushでは最初に短時間のスモークテストを実行
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go 1.24.2
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.2'
+
+      - name: Install k6
+        run: |
+          sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+          echo "deb https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install k6
+
+      - name: Install Kind
+        run: |
+          curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.27.0/kind-linux-amd64
+          chmod +x ./kind
+          sudo mv ./kind /usr/local/bin/kind
+
+      - name: Setup envtest
+        id: setup-envtest
+        uses: kubernetes-sigs/setup-envtest@v1
+        with:
+          version: 'v1.32.0'
+
+      - name: Run smoke test (5min)
+        run: |
+          mkdir -p logs/heap_dumps
+          SMOKE=true scripts/run_soak.sh
+        env:
+          KUBEBUILDER_ASSETS: ${{ steps.setup-envtest.outputs.envtest_assets }}
+
+      - name: Upload logs
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-test-logs
+          path: logs/
+          if-no-files-found: warn
+
+  soak-test-short:
+    name: Soak Test (5min)
+    needs: [race-test, smoke-test]
+    runs-on: ubuntu-latest
+    # スモークテスト成功後に実行する短時間ソークテスト
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go 1.22
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Install k6
+        run: |
+          sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+          echo "deb https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install k6
+
+      - name: Install Kind
+        run: |
+          curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.20.0/kind-linux-amd64
+          chmod +x ./kind
+          sudo mv ./kind /usr/local/bin/kind
+
+      - name: Setup envtest
+        id: setup-envtest
+        uses: kubernetes-sigs/setup-envtest@v1
+        with:
+          version: 'v1.32.0'
+
+      - name: Run soak test (5min)
+        run: |
+          mkdir -p logs/heap_dumps
+          DURATION=5m scripts/run_soak.sh
+        env:
+          KUBEBUILDER_ASSETS: ${{ steps.setup-envtest.outputs.envtest_assets }}
+
+      - name: Upload logs
+        uses: actions/upload-artifact@v4
+        with:
+          name: soak-test-logs-short
+          path: logs/
+          if-no-files-found: warn
+
+  soak-test-full:
+    name: Full Soak Test (24h)
+    runs-on: ubuntu-latest
+    # 手動トリガー、かつsoakパラメータがtrueの場合のみ実行
+    if: github.event_name == 'workflow_dispatch' && inputs.soak == 'true'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go 1.22
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Install k6
+        run: |
+          sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+          echo "deb https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install k6
+
+      - name: Install Kind
+        run: |
+          curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.20.0/kind-linux-amd64
+          chmod +x ./kind
+          sudo mv ./kind /usr/local/bin/kind
+
+      - name: Setup envtest
+        id: setup-envtest
+        uses: kubernetes-sigs/setup-envtest@v1
+        with:
+          version: 'v1.32.0'
+
+      - name: Run full soak test (24h)
+        run: |
+          mkdir -p logs/heap_dumps
+          SOAK=true scripts/run_soak.sh
+        env:
+          KUBEBUILDER_ASSETS: ${{ steps.setup-envtest.outputs.envtest_assets }}
+
+      - name: Upload logs
+        uses: actions/upload-artifact@v4
+        with:
+          name: soak-test-logs-full
+          path: logs/
+          if-no-files-found: warn
+
+      - name: Upload heap dumps
+        uses: actions/upload-artifact@v4
+        with:
+          name: heap-dumps
+          path: logs/heap_dumps/
+          if-no-files-found: warn
