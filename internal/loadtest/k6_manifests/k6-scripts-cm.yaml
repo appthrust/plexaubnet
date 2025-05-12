@@ -1,0 +1,135 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: k6-scripts
+  labels:
+    app: k6-loadtest
+data:
+  # Content of subnetpoolclaim_load_test.js stored in ConfigMap
+  # Only placeholders are defined here, the scripts are actually generated dynamically
+  subnetpoolclaim.js: |
+    import http from 'k6/http';
+    import { check, sleep } from 'k6';
+    import { randomString } from 'https://jslib.k6.io/k6-utils/1.2.0/index.js';
+    
+    // Test configuration
+    export const options = {
+      scenarios: {
+        poolclaim_ops: {
+          executor: 'constant-vus',
+          vus: 20, // Number of concurrent users
+          duration: '30m', // Default execution time (overridden by shell script if SOAK=true)
+          gracefulStop: '1m',
+        },
+      },
+      thresholds: {
+        http_req_failed: ['rate<0.01'], // Allow error rate less than 1%
+        http_req_duration: ['p(95)<5000'], // 95th percentile under 5 seconds
+      },
+    };
+    
+    // Test variables
+    const API_BASE = __ENV.API_BASE || 'https://kubernetes.default.svc';
+    const NAMESPACE = __ENV.NAMESPACE || 'default';
+    const POOL_NAME = __ENV.POOL_NAME || 'pool-for-claim-load';
+    
+    // Main test function
+    export default function() {
+      // Script content is generated at runtime by run_soak.sh
+    }
+    
+  # Placeholder for subnetpool_load_test.js
+  subnetpool.js: |
+    import http from 'k6/http';
+    import { check, sleep } from 'k6';
+    import { randomString } from 'https://jslib.k6.io/k6-utils/1.2.0/index.js';
+    
+    // Test configuration
+    export const options = {
+      scenarios: {
+        pool_ops: {
+          executor: 'constant-vus',
+          vus: 15,
+          duration: '30m',
+          gracefulStop: '1m',
+        },
+      },
+      thresholds: {
+        http_req_failed: ['rate<0.01'],
+        http_req_duration: ['p(95)<5000'],
+      },
+    };
+    
+    // Test variables
+    const API_BASE = __ENV.API_BASE || 'https://kubernetes.default.svc';
+    const NAMESPACE = __ENV.NAMESPACE || 'default';
+    
+    // Main test function
+    export default function() {
+      // Script content is generated at runtime by run_soak.sh
+    }
+  
+  # Placeholder for subnetclaim_load_test.js
+  subnetclaim.js: |
+    import http from 'k6/http';
+    import { check, sleep } from 'k6';
+    import { randomString } from 'https://jslib.k6.io/k6-utils/1.2.0/index.js';
+    
+    // Test configuration
+    export const options = {
+      scenarios: {
+        subnetclaim_ops: {
+          executor: 'constant-arrival-rate',
+          rate: 200, // Requests per second
+          timeUnit: '1s',
+          preAllocatedVUs: 50,
+          maxVUs: 200,
+          duration: '30m',
+          gracefulStop: '1m',
+        },
+      },
+      thresholds: {
+        http_req_failed: ['rate<0.01'], // Allow error rate less than 1%
+        http_req_duration: ['p(95)<3000'], // 95th percentile under 3 seconds
+      },
+    };
+    
+    // Test variables
+    const API_BASE = __ENV.API_BASE || 'https://kubernetes.default.svc';
+    const NAMESPACE = __ENV.NAMESPACE || 'default';
+    
+    // Main test function
+    export default function() {
+      // Script content is generated at runtime by run_soak.sh
+    }
+    
+  # Placeholder for subnet_load_test.js
+  subnet.js: |
+    import http from 'k6/http';
+    import { check, sleep } from 'k6';
+    import { randomString } from 'https://jslib.k6.io/k6-utils/1.2.0/index.js';
+    
+    // Test configuration
+    export const options = {
+      scenarios: {
+        subnet_ops: {
+          executor: 'constant-vus',
+          vus: 10,
+          duration: '30m',
+          gracefulStop: '1m',
+        },
+      },
+      thresholds: {
+        http_req_failed: ['rate<0.01'],
+        http_req_duration: ['p(95)<5000'],
+      },
+    };
+    
+    // Test variables
+    const API_BASE = __ENV.API_BASE || 'https://kubernetes.default.svc';
+    const NAMESPACE = __ENV.NAMESPACE || 'default';
+    
+    // Main test function
+    export default function() {
+      // Script content is generated at runtime by run_soak.sh
+    }

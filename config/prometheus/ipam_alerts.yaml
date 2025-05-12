@@ -1,0 +1,36 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: aquanaut-ipam-alerts
+  labels:
+    prometheus: kube-prometheus
+spec:
+  groups:
+    - name: aquanaut-ipam
+      rules:
+      - alert: SubnetPoolExhausted
+        expr: min by (pool, size) (aquanaut_subnet_free) < 5
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Subnet Pool nearly exhausted"
+          description: "Subnet Pool {{ $labels.pool }} has less than 5 free blocks of size /{{ $labels.size }}."
+          
+      - alert: HighAllocationRetryRate
+        expr: rate(aquanaut_subnet_alloc_retry_total[5m]) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High Subnet allocation retry rate"
+          description: "Subnet allocator is experiencing high retry rate, possibly due to concurrent allocations or conflicts."
+          
+      - alert: SlowAllocation
+        expr: histogram_quantile(0.95, rate(aquanaut_subnet_alloc_latency_seconds_bucket[10m])) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Slow Subnet allocation"
+          description: "Subnet allocation p95 latency is > 0.5s, allocation performance may be degraded."

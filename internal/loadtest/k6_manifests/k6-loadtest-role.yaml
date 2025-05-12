@@ -1,0 +1,37 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: k6-loadtest-role
+  labels:
+    app: k6-loadtest
+rules:
+# Permissions to operate plexaubnet resources
+- apiGroups:
+  - plexaubnet.io
+  resources:
+  - subnetpools
+  - subnets 
+  - subnetpoolclaims
+  - subnetclaims
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: k6-loadtest-rolebinding
+  labels:
+    app: k6-loadtest
+subjects:
+- kind: ServiceAccount
+  name: k6-loadtest
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: k6-loadtest-role

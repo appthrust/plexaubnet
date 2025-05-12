@@ -1,0 +1,59 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: manager-role
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - create
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - plexaubnet.io
+  resources:
+  - subnetclaims
+  - subnetpoolclaims
+  - subnetpools
+  - subnets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - plexaubnet.io
+  resources:
+  - subnetclaims/finalizers
+  - subnetpoolclaims/finalizers
+  - subnetpools/finalizers
+  - subnets/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - plexaubnet.io
+  resources:
+  - subnetclaims/status
+  - subnetpoolclaims/status
+  - subnetpools/status
+  - subnets/status
+  verbs:
+  - get
+  - patch
+  - update

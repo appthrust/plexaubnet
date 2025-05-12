@@ -1,0 +1,12 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: manager-rolebinding
+subjects:
+  - kind: ServiceAccount
+    name: plexaubnet-controller-manager  # namePrefix が適用される
+    namespace: system                    # Kustomize の namespace 指定に合わせる
+roleRef:
+  kind: ClusterRole
+  name: plexaubnet-manager-role         # namePrefix が適用される
+  apiGroup: rbac.authorization.k8s.io

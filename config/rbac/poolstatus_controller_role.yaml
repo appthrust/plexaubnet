@@ -1,0 +1,15 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: poolstatus-controller-role
+rules:
+- apiGroups: ["plexaubnet.io"]
+  resources: ["subnetpools"]
+  verbs: ["get","list","watch","patch","update"]
+- apiGroups: ["plexaubnet.io"]
+  resources: ["subnetpools/status"]
+  verbs: ["get","update","patch"]
+- apiGroups: ["plexaubnet.io"]
+  resources: ["subnets"]
+  verbs: ["get","list","watch"]
