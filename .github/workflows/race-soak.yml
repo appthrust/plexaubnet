@@ -61,9 +61,9 @@ jobs:
           KUBEBUILDER_ASSETS: ${{ steps.setup-envtest.outputs.envtest_assets }}
 
       - name: Upload coverage
+        if: matrix.arch == 'amd64'
         uses: actions/upload-artifact@v4
         with:
-          if: matrix.arch == 'amd64'
           name: coverage-race-linux-amd64
           path: coverage.out
           if-no-files-found: warn
