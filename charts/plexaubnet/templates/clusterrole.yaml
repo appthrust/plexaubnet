@@ -1,0 +1,36 @@
+{{- if .Values.rbac.create -}}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "plexaubnet.fullname" . }}
+  labels:
+    {{- include "plexaubnet.labels" . | nindent 4 }}
+rules:
+  # Event recording
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create", "patch"]
+  # Leader election
+  - apiGroups: ["coordination.k8s.io"]
+    resources: ["leases"]
+    verbs: ["create", "get", "list", "patch", "update", "watch"]
+  # Plexaubnet custom resources
+  - apiGroups: ["plexaubnet.io"]
+    resources:
+      - subnetclaims
+      - subnetclaims/status
+      - subnetclaims/finalizers
+      - subnetpoolclaims
+      - subnetpoolclaims/status
+      - subnetpoolclaims/finalizers
+      - subnetpools
+      - subnetpools/status
+      - subnetpools/finalizers
+      - subnets
+      - subnets/status
+      - subnets/finalizers
+    verbs: ["create", "delete", "get", "list", "patch", "update", "watch"]
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list", "watch", "create", "update", "patch"]
+{{- end }} 

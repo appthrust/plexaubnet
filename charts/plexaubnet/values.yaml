@@ -1,0 +1,72 @@
+# Default values for Plexaubnet Helm chart
+# This file contains the default configuration values.
+
+image:
+  repository: ghcr.io/appthrust/plexaubnet
+  # -- Overrides the image tag whose default is the chart appVersion.
+  tag: ""
+  pullPolicy: IfNotPresent
+
+# -- Additional image pull secrets
+imagePullSecrets: []
+
+nameOverride: ""
+fullnameOverride: ""
+
+# Controller replica count
+replicaCount: 1
+
+serviceAccount:
+  # -- Specifies whether a ServiceAccount should be created
+  create: true
+  # -- Annotations to add to the ServiceAccount
+  annotations: {}
+  # -- The name of the ServiceAccount to use. If not set and create is true, a name is generated using the fullname template.
+  name: ""
+
+rbac:
+  # -- Specifies whether RBAC resources should be created
+  create: true
+
+resources:
+  limits:
+    cpu: 1500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 256Mi
+
+affinity: {}
+
+nodeSelector: {}
+
+tolerations: []
+
+metrics:
+  enabled: true
+  port: 8080
+  secure: false
+  serviceMonitor:
+    enabled: false
+    interval: 30s
+    scrapeTimeout: 10s
+
+healthProbePort: 8081
+pprofPort: 6060
+
+# Pod Security Context settings
+podSecurityContext:
+  runAsUser: 65532
+  runAsGroup: 65532
+  fsGroup: 65532
+  seccompProfile:
+    type: RuntimeDefault
+  runAsNonRoot: true
+
+# -- Container-level security context defaults
+containerSecurityContext:
+  readOnlyRootFilesystem: true
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - "ALL" 

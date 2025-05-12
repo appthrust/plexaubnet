@@ -1,0 +1,22 @@
+{{- if and .Values.metrics.enabled .Values.metrics.serviceMonitor.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "plexaubnet.fullname" . }}
+  labels:
+    {{- include "plexaubnet.labels" . | nindent 4 }}
+spec:
+  endpoints:
+    - port: http-metrics
+      interval: {{ .Values.metrics.serviceMonitor.interval }}
+      scrapeTimeout: {{ .Values.metrics.serviceMonitor.scrapeTimeout }}
+{{- if .Values.metrics.secure }}
+      scheme: https
+{{- end }}
+  selector:
+    matchLabels:
+      {{- include "plexaubnet.labels" . | nindent 6 }}
+  namespaceSelector:
+    matchNames:
+      - "{{ .Release.Namespace }}"
+{{- end }} 

@@ -1,0 +1,134 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.17.0
+  name: subnetpools.plexaubnet.io
+spec:
+  group: plexaubnet.io
+  names:
+    kind: SubnetPool
+    listKind: SubnetPoolList
+    plural: subnetpools
+    shortNames:
+      - subnetpool
+    singular: subnetpool
+  scope: Namespaced
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - name: CIDR
+          jsonPath: .spec.cidr
+          type: string
+        - name: Strategy
+          jsonPath: .spec.strategy
+          type: string
+        - name: Allocated
+          jsonPath: .status.allocatedCount
+          type: integer
+        - name: Age
+          jsonPath: .metadata.creationTimestamp
+          type: date
+      schema:
+        openAPIV3Schema:
+          preserveUnknownFields: false
+          description: SubnetPool is the Schema for the subnetpools API
+          type: object
+          properties:
+            apiVersion:
+              type: string
+              description: |
+                APIVersion defines the versioned schema of this representation of an object.
+                Servers should convert recognized schemas to the latest internal value, and
+                may reject unrecognized values.
+            kind:
+              type: string
+              description: |
+                Kind is a string value representing the REST resource this object represents.
+            metadata:
+              type: object
+            spec:
+              type: object
+              description: SubnetPoolSpec defines the desired state of SubnetPool
+              required:
+                - cidr
+              properties:
+                cidr:
+                  type: string
+                  description: CIDR is the overall CIDR range for this pool
+                defaultBlockSize:
+                  type: integer
+                  minimum: 16
+                  maximum: 28
+                  default: 24
+                  description: Default prefix length when a claim omits blockSize
+                minBlockSize:
+                  type: integer
+                  minimum: 16
+                  maximum: 28
+                  description: Minimum prefix length claimable from this pool
+                maxBlockSize:
+                  type: integer
+                  minimum: 16
+                  maximum: 28
+                  description: Maximum prefix length claimable from this pool
+                strategy:
+                  type: string
+                  enum:
+                    - Linear
+                    - Buddy
+                  default: Linear
+                  description: Allocation strategy to use
+            status:
+              type: object
+              description: SubnetPoolStatus defines the observed state of SubnetPool
+              properties:
+                allocatedCIDRs:
+                  type: object
+                  additionalProperties:
+                    type: string
+                  description: Map of allocated CIDRs to cluster IDs
+                allocatedCount:
+                  type: integer
+                  description: Number of allocated subnet blocks
+                freeCountBySize:
+                  type: object
+                  additionalProperties:
+                    type: integer
+                  description: Free blocks per prefix size
+                conditions:
+                  type: array
+                  items:
+                    type: object
+                    description: Condition describes state for a cluster.
+                    required:
+                      - type
+                      - status
+                      - lastTransitionTime
+                      - reason
+                      - message
+                    properties:
+                      type:
+                        type: string
+                      status:
+                        type: string
+                        enum:
+                          - "True"
+                          - "False"
+                          - Unknown
+                      lastTransitionTime:
+                        type: string
+                        format: date-time
+                      reason:
+                        type: string
+                      message:
+                        type: string
+                observedGeneration:
+                  type: integer
+                  format: int64
+                  description: Last processed generation 

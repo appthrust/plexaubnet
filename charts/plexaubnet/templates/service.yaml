@@ -1,0 +1,23 @@
+{{- if .Values.metrics.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "plexaubnet.fullname" . }}-metrics
+  labels:
+    {{- include "plexaubnet.labels" . | nindent 4 }}
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "{{ .Values.metrics.port }}"
+{{- if and .Values.metrics.secure (not .Values.metrics.serviceMonitor.enabled) }}
+    prometheus.io/scheme: "https"
+{{- end }}
+spec:
+  type: ClusterIP
+  ports:
+    - name: http-metrics
+      port: {{ .Values.metrics.port }}
+      targetPort: {{ .Values.metrics.port }}
+      protocol: TCP
+  selector:
+    {{- include "plexaubnet.selectorLabels" . | nindent 4 }}
+{{- end }} 

@@ -126,6 +126,42 @@ For detailed design docs see:
 
 ## 5. Installation
 
+### Helm (official chart)
+
+```bash
+# ▶︎ From a published Helm repo (coming soon)
+helm repo add plexaubnet https://appthrust.github.io/plexaubnet-charts
+helm repo update
+helm install plexaubnet plexaubnet/plexaubnet \
+  --namespace plexaubnet \
+  --create-namespace
+
+# ▶︎ From the source tree (development / local testing)
+helm install plexaubnet charts/plexaubnet \
+  --namespace plexaubnet \
+  --create-namespace
+
+# Example: load a locally-built image into kind and deploy
+kind create cluster --name plexaubnet-test
+
+docker build -t ghcr.io/appthrust/plexaubnet:dev .
+kind load docker-image ghcr.io/appthrust/plexaubnet:dev --name plexaubnet-test
+
+helm install plexaubnet charts/plexaubnet \
+  --namespace plexaubnet \
+  --create-namespace \
+  --set image.tag=dev
+```
+
+Common values:
+| Key | Default | Description |
+|-----|---------|-------------|
+| `metrics.enabled` | `true` | Expose `/metrics` endpoint & create Service |
+| `metrics.serviceMonitor.enabled` | `false` | Create ServiceMonitor for Prometheus Operator |
+| `podSecurityContext.runAsUser` | `65532` | Non-root UID (non-root distroless) |
+
+> **Tip**: run `helm show values charts/plexaubnet` for the full list.
+
 ### Kustomize (recommended)
 
 ```bash
