@@ -62,17 +62,27 @@ fmt: ## Run go fmt against code.
 vet: ## Run go vet against code.
 	go vet ./...
 
+# Exclude:
+#  - /e2e          : end-to-end tests
+#  - /api/         : generated CRD types
+#  - /cmd          : CLI/main entrypoint (no logic worth unit-testing)
+#  - /internal/testutils : helper code
+# Use 'grep -vE' with regex to cover both "/cmd" and "/cmd/…" patterns.
+PACKAGES := $(shell go list ./... | grep -v /e2e | grep -v '/api/' | grep -vE '/cmd($$|/)' | grep -v '/internal/testutils')
+
 .PHONY: test
 test: manifests generate fmt vet setup-envtest ## Run tests.
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test $$(go list ./... | grep -v /e2e) -coverprofile cover.out
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test $(PACKAGES) -coverprofile cover.out
 
 .PHONY: test-race
 test-race: manifests generate fmt vet setup-envtest ## Run tests with race detector.
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test -race -count=1 $$(go list ./... | grep -v /e2e) -coverprofile cover.out
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test -race -count=1 $(PACKAGES) -coverprofile cover.out
 
 .PHONY: coverage
-coverage: test ## Generate coverage report with detailed HTML output.
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test $$(go list ./... | grep -v /e2e) -coverprofile=coverage.out -covermode=atomic
+# Generate coverage report (HTML) using the same filtered package list to ensure consistency with CI threshold.
+coverage: manifests generate fmt vet setup-envtest ## Generate coverage report with detailed HTML output.
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" \
+		go test $(PACKAGES) -coverprofile=coverage.out -covermode=atomic
 	go tool cover -html=coverage.out -o coverage.html
 
 # TODO(user): To use a different vendor for e2e tests, modify the setup under 'tests/e2e'.
