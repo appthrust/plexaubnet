@@ -6,7 +6,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
 
 	ipamv1 "github.com/appthrust/plexaubnet/api/v1alpha1"
@@ -27,8 +27,15 @@ func expectEvent(t *testing.T, events <-chan string, wantReason string) {
 
 func TestEventEmitter(t *testing.T) {
 	rec := record.NewFakeRecorder(5)
-	sc := scheme.Scheme
-	// Register our API type to scheme so fake recorder can encode object reference
+
+	// Create an *isolated* scheme for this unit test to avoid mutating the global
+	// scheme.Scheme that is being used concurrently by other integration tests
+	// running in background goroutines (e.g. envtest controller-manager). Writing
+	// to the global map after those goroutines are started causes the race
+	// detector to fire. Using a private scheme here guarantees our registration
+	// is thread-safe.
+	sc := runtime.NewScheme()
+	_ = corev1.AddToScheme(sc)
 	_ = ipamv1.AddToScheme(sc)
 
 	emitter := NewEventEmitter(rec, sc)
