@@ -48,9 +48,14 @@ node_modules/
 # Task files
 tasks.json
 tasks/ 
+
+# Heap files
 heap/*.xz
 heap/*.prof
+
+# Work files
 memo.md
+work/
 
 # AI related
 mcp.json
