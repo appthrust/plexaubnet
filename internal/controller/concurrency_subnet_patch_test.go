@@ -138,7 +138,13 @@ func TestSubnetCreateDeleteConcurrency(t *testing.T) {
 		t.Fatalf("Failed to setup pool status controller: %v", err)
 	}
 
-	// Start manager in a goroutine
+	// Reset metrics BEFORE starting the controller manager to avoid
+	// concurrent mutations that can trigger the Go race detector.
+	// The manager (and its reconcilers) will start updating the metric
+	// only after this point, so no data race can occur with Reset().
+	statusutil.SubnetStatusUpdateTotal.Reset()
+
+	// Start manager in a goroutine (after metric reset)
 	mgrCtx, mgrCancel := context.WithCancel(ctx)
 	defer mgrCancel()
 	go func() {
@@ -148,16 +154,15 @@ func TestSubnetCreateDeleteConcurrency(t *testing.T) {
 		}
 	}()
 
-	// Wait for the manager's cache to be ready
+	// Wait for the manager's cache to be ready before proceeding so that
+	// subsequent operations (including metric reads) observe a fully running
+	// controller.
 	if !mgr.GetCache().WaitForCacheSync(mgrCtx) {
 		t.Fatalf("Failed waiting for cache sync")
 	}
-	time.Sleep(2 * time.Second) // Wait a bit longer
+	time.Sleep(2 * time.Second) // additional settle time
 
-	// Reset metrics
-	statusutil.SubnetStatusUpdateTotal.Reset()
-
-	// Store previous values
+	// Capture baseline metric values AFTER the manager has started.
 	startSkippedDeletedCount := testutil.ToFloat64(statusutil.SubnetStatusUpdateTotal.WithLabelValues("skipped_deleted"))
 	startErrorCount := testutil.ToFloat64(statusutil.SubnetStatusUpdateTotal.WithLabelValues("error"))
 
