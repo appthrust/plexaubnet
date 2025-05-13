@@ -1,0 +1,57 @@
+name: Publish Helm Chart
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - "charts/plexaubnet/**"
+      - "charts/plexaubnet/Chart.yaml"
+  workflow_dispatch: {}
+
+jobs:
+  release-chart:
+    name: Package & Publish Helm Chart
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read  # For actions/checkout
+
+    steps:
+      - name: "Checkout source"
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: "Set up Helm"
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.14.3
+
+      - name: "Package chart"
+        run: |
+          helm lint charts/plexaubnet
+          mkdir -p _dist
+          helm package charts/plexaubnet --destination _dist
+
+      - name: "Prepare repo directory"
+        run: |
+          mkdir -p repo
+          cp _dist/*.tgz repo/
+          # Merge (or create) index.yaml with existing remote contents
+          if curl -sfL https://appthrust.github.io/plexaubnet/index.yaml -o repo/index.yaml; then
+            echo "Merged existing index.yaml"
+          else
+            echo "No existing index.yaml found; creating new"
+          fi
+          helm repo index repo --url https://appthrust.github.io/plexaubnet --merge repo/index.yaml || \
+            helm repo index repo --url https://appthrust.github.io/plexaubnet
+
+      - name: "Publish to gh-pages (same repo)"
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: repo
+          keep_files: true
+          user_name: github-actions[bot]
+          user_email: github-actions[bot]@users.noreply.github.com 

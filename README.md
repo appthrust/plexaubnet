@@ -1,6 +1,6 @@
 # Plexaubnet (CIDR Operator)
 
-Declarative CIDR Management Operator for Multi-Cluster Kubernetes v1.30+
+Declarative CIDR Management Operator for Multi-Cluster Kubernetes v1.28+
 
 <!-- Badges -->
 [![CI](https://github.com/appthrust/plexaubnet/actions/workflows/test.yml/badge.svg)](https://github.com/appthrust/plexaubnet/actions/workflows/test.yml) ![Go Report Card](https://goreportcard.com/badge/github.com/appthrust/plexaubnet) ![License](https://img.shields.io/github/license/appthrust/plexaubnet)
@@ -9,15 +9,15 @@ Declarative CIDR Management Operator for Multi-Cluster Kubernetes v1.30+
 
 ## 1. Introduction
 
-**Plexaubnet** is the OSS spin-off of the IPAM subsystem from the [Aquanaut Project](https://github.com/appthrust/aquanaut).  
+**Plexaubnet** is a lightweight Kubernetes operator that automates CIDR assignment across clusters, tenants, or applications with simple declarative YAML—no spreadsheets, no custom scripts.  
 It delivers declarative, idempotent CIDR assignment for clusters, tenants, or applications across multi-cluster environments.  
 While designed to integrate seamlessly with Submariner, Calico and other CNI plug-ins, Plexaubnet works perfectly as a standalone operator.
 
 **Key benefits**
-- Self-service CIDR allocation via CRDs – no spreadsheets required
-- O(1) look-ups through centralized field indexers
-- Fine-grained block-size control with *Linear* and *Buddy* strategies
-- Prometheus metrics and detailed status for full observability
+- Self-service CIDR allocation via CRDs – forget spreadsheets and ticket queues
+- Instant visibility into free & used ranges with millisecond-fast look-ups
+- Request exactly the subnet size you need (/16 – /28) while Plexaubnet handles the math with Linear or Buddy strategies
+- Built-in Prometheus metrics and rich CRD status for effortless monitoring and troubleshooting
 
 ---
 
@@ -129,9 +129,8 @@ For detailed design docs see:
 ### Helm (official chart)
 
 ```bash
-# ▶︎ From a published Helm repo (coming soon)
-helm repo add plexaubnet https://appthrust.github.io/plexaubnet-charts
-helm repo update
+# ▶︎ From the published Helm repo
+helm repo add plexaubnet https://appthrust.github.io/plexaubnet
 helm install plexaubnet plexaubnet/plexaubnet \
   --namespace plexaubnet \
   --create-namespace
@@ -180,7 +179,7 @@ After installation verify CRDs:
 kubectl get crds | grep plexaubnet
 ```
 
-Helm chart support is on the roadmap (see below).
+Helm chart support is now available via the published repo above.
 
 ---
 
