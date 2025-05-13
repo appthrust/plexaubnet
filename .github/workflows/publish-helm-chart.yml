@@ -2,7 +2,7 @@ name: Publish Helm Chart
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, feat-helm-chart ]
     paths:
       - "charts/plexaubnet/**"
       - "charts/plexaubnet/Chart.yaml"
