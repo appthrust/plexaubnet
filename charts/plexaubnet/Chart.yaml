@@ -1,7 +1,7 @@
 apiVersion: v2
 name: plexaubnet
 # The chart version follows SemVer and is automatically bumped via release tooling
-version: 0.1.0
+version: 0.1.1
 appVersion: "v0.5.0"
 type: application
 description: A Helm chart for deploying the Plexaubnet (CIDR Operator) controller to Kubernetes clusters.
