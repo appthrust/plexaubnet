@@ -28,7 +28,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
@@ -44,8 +43,8 @@ func TestSubnetCreateDeleteConcurrency(t *testing.T) {
 		t.Skip("Skipping in short mode")
 	}
 
-	// Setup test environment
-	testEnv := setupEnvTest(t)
+	// Setup test environment with private scheme
+	testEnv, testScheme := setupEnvTest(t)
 	defer stopEnvTest(t, testEnv)
 
 	cfg, err := testEnv.Start()
@@ -53,8 +52,8 @@ func TestSubnetCreateDeleteConcurrency(t *testing.T) {
 		t.Fatalf("Failed to start test env: %v", err)
 	}
 
-	// Create client
-	k8sClient, err := createK8sClient(cfg)
+	// Create client with our private scheme
+	k8sClient, err := createK8sClient(cfg, testScheme)
 	if err != nil {
 		t.Fatalf("Failed to create k8s client: %v", err)
 	}
@@ -95,10 +94,10 @@ func TestSubnetCreateDeleteConcurrency(t *testing.T) {
 		t.Fatalf("Failed to create pool: %v", err)
 	}
 
-	// Setup manager
+	// Setup manager with our private scheme
 	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
-		Scheme: scheme.Scheme,
+		Scheme: testScheme,
 		Metrics: metricsserver.Options{
 			BindAddress: "0", // Disable metrics server
 		},

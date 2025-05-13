@@ -25,7 +25,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -73,9 +72,15 @@ var _ = BeforeSuite(func() {
 	Expect(envErr).NotTo(HaveOccurred(), "Failed to set KUBEBUILDER_KUBE_APISERVER_FLAGS")
 
 	By("bootstrapping test environment")
+
+	// Create a private scheme for this test suite to avoid race conditions
+	// with other test suites trying to register types to the global scheme
+	testScheme := NewTestScheme()
+
 	testEnv = &envtest.Environment{
 		CRDDirectoryPaths:     []string{filepath.Join("..", "..", "config", "crd", "bases")},
 		ErrorIfCRDPathMissing: true,
+		Scheme:                testScheme, // Use our private scheme
 	}
 
 	var err error
@@ -89,12 +94,12 @@ var _ = BeforeSuite(func() {
 	cfg.Burst = 400 // Significantly increased from default 10
 	GinkgoWriter.Printf("Setting high QPS=%v, Burst=%v for parallel test\n", cfg.QPS, cfg.Burst)
 
-	err = ipamv1.AddToScheme(scheme.Scheme)
-	Expect(err).NotTo(HaveOccurred())
+	// Note: we don't need to call ipamv1.AddToScheme(scheme.Scheme) anymore
+	// since the types are already registered in our private scheme via NewTestScheme()
 
 	//+kubebuilder:scaffold:scheme
 
-	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
+	k8sClient, err = client.New(cfg, client.Options{Scheme: testScheme})
 	Expect(err).NotTo(HaveOccurred())
 	Expect(k8sClient).NotTo(BeNil())
 
@@ -104,9 +109,9 @@ var _ = BeforeSuite(func() {
 	os.Setenv("KUBEBUILDER_CONTROLPLANE_START_PORT", "18200")
 
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
-		Scheme:                 scheme.Scheme,
-		HealthProbeBindAddress: "0",   // Disable health check server
-		LeaderElection:         false, // Also disable leader election
+		Scheme:                 testScheme, // Use our private scheme
+		HealthProbeBindAddress: "0",        // Disable health check server
+		LeaderElection:         false,      // Also disable leader election
 		Metrics: metricsserver.Options{
 			BindAddress: "0", // Disable metrics server
 		},

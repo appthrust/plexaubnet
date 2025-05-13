@@ -30,8 +30,8 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -43,9 +43,13 @@ import (
 )
 
 // Helper function to set up the test environment
-func setupEnvTest(t *testing.T) *envtest.Environment {
+func setupEnvTest(t *testing.T) (*envtest.Environment, *runtime.Scheme) {
+	// Use helper to create private scheme with all required types
+	testScheme := NewTestScheme()
+
 	testEnv := &envtest.Environment{
 		CRDDirectoryPaths: []string{"../../config/crd/bases"},
+		Scheme:            testScheme, // Use our private scheme
 	}
 
 	cfg, err := testEnv.Start()
@@ -57,12 +61,10 @@ func setupEnvTest(t *testing.T) *envtest.Environment {
 	cfg.QPS = 200   // Significantly increased from default 5
 	cfg.Burst = 400 // Significantly increased from default 10
 
-	err = ipamv1.AddToScheme(scheme.Scheme)
-	if err != nil {
-		t.Fatalf("Error adding scheme: %v", err)
-	}
+	// Note: we don't need to call ipamv1.AddToScheme(scheme.Scheme) anymore
+	// since the types are already registered in our private scheme
 
-	return testEnv
+	return testEnv, testScheme
 }
 
 // Helper function to stop the test environment
@@ -73,16 +75,16 @@ func stopEnvTest(t *testing.T, testEnv *envtest.Environment) {
 }
 
 // Helper function to create a k8s client
-func createK8sClient(cfg *rest.Config) (client.Client, error) {
-	// Use existing Scheme
-	return client.New(cfg, client.Options{Scheme: scheme.Scheme})
+func createK8sClient(cfg *rest.Config, s *runtime.Scheme) (client.Client, error) {
+	// Use the provided private scheme
+	return client.New(cfg, client.Options{Scheme: s})
 }
 
 // Helper function to set up the manager
-func setupManager(cfg *rest.Config) (ctrl.Manager, error) {
+func setupManager(cfg *rest.Config, s *runtime.Scheme) (ctrl.Manager, error) {
 
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
-		Scheme: scheme.Scheme,
+		Scheme: s, // Use the provided private scheme
 		Metrics: metricsserver.Options{
 			BindAddress: "0", // Disable metrics server
 		},
@@ -112,8 +114,8 @@ func TestHighLoad1000SubnetClaimCreate(t *testing.T) {
 	initialGoroutines := goruntime.NumGoroutine()
 	t.Logf("Initial goroutines: %d", initialGoroutines)
 
-	// Setup test environment
-	testEnv := setupEnvTest(t)
+	// Setup test environment with private scheme
+	testEnv, testScheme := setupEnvTest(t)
 	defer stopEnvTest(t, testEnv)
 
 	// Get test environment configuration
@@ -122,8 +124,8 @@ func TestHighLoad1000SubnetClaimCreate(t *testing.T) {
 		t.Fatalf("Failed to start test env: %v", err)
 	}
 
-	// Create client
-	k8sClient, err := createK8sClient(cfg)
+	// Create client using our private scheme
+	k8sClient, err := createK8sClient(cfg, testScheme)
 	if err != nil {
 		t.Fatalf("Failed to create k8s client: %v", err)
 	}
@@ -167,9 +169,9 @@ func TestHighLoad1000SubnetClaimCreate(t *testing.T) {
 	startHeap := &goruntime.MemStats{}
 	goruntime.ReadMemStats(startHeap)
 
-	// Start controller
+	// Start controller with our private scheme
 	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
-	mgr, err := setupManager(cfg)
+	mgr, err := setupManager(cfg, testScheme)
 	if err != nil {
 		t.Fatalf("Failed to setup manager: %v", err)
 	}
@@ -379,8 +381,8 @@ func TestParentPoolContentionWithClaims(t *testing.T) {
 		t.Skip("Skipping parent pool contention test in short mode")
 	}
 
-	// Setup test environment
-	testEnv := setupEnvTest(t)
+	// Setup test environment with private scheme
+	testEnv, testScheme := setupEnvTest(t)
 	defer stopEnvTest(t, testEnv)
 
 	// Get test environment configuration
@@ -389,8 +391,8 @@ func TestParentPoolContentionWithClaims(t *testing.T) {
 		t.Fatalf("Failed to start test env: %v", err)
 	}
 
-	// Create client
-	k8sClient, err := createK8sClient(cfg)
+	// Create client using our private scheme
+	k8sClient, err := createK8sClient(cfg, testScheme)
 	if err != nil {
 		t.Fatalf("Failed to create k8s client: %v", err)
 	}
@@ -438,9 +440,9 @@ func TestParentPoolContentionWithClaims(t *testing.T) {
 		t.Fatalf("Failed to create pool: %v", err)
 	}
 
-	// Start controller
+	// Start controller with our private scheme
 	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
-	mgr, err := setupManager(cfg)
+	mgr, err := setupManager(cfg, testScheme)
 	if err != nil {
 		t.Fatalf("Failed to setup manager: %v", err)
 	}

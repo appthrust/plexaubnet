@@ -30,7 +30,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -92,9 +91,13 @@ func TestMain(m *testing.M) {
 
 	// Start envtest environment
 	fmt.Println("Parent Pool Integration Test: Setting up envtest environment...")
+	// Use common helper to create private scheme with all required types
+	testScheme := NewTestScheme()
+
 	parentPoolTestEnv = &envtest.Environment{
 		CRDDirectoryPaths:     []string{filepath.Join("..", "..", "config", "crd", "bases")},
 		ErrorIfCRDPathMissing: true,
+		Scheme:                testScheme, // Use our private scheme
 	}
 
 	var err error
@@ -109,23 +112,19 @@ func TestMain(m *testing.M) {
 	parentPoolRestConfig.QPS = 100
 	parentPoolRestConfig.Burst = 200
 
-	// Add IPAM CRD to schema
-	err = ipamv1.AddToScheme(scheme.Scheme)
-	if err != nil {
-		fmt.Printf("Parent Pool Integration Test: Schema registration failed: %v\n", err)
-		os.Exit(1)
-	}
+	// Note: we don't need to call ipamv1.AddToScheme(scheme.Scheme) anymore
+	// since the types are already registered in our private scheme
 
-	// Create client
-	parentPoolClient, err = client.New(parentPoolRestConfig, client.Options{Scheme: scheme.Scheme})
+	// Create client with our private scheme
+	parentPoolClient, err = client.New(parentPoolRestConfig, client.Options{Scheme: testScheme})
 	if err != nil {
 		fmt.Printf("Parent Pool Integration Test: Client creation failed: %v\n", err)
 		os.Exit(1)
 	}
 
-	// Setup controller manager
+	// Setup controller manager with our private scheme
 	mgr, err := ctrl.NewManager(parentPoolRestConfig, ctrl.Options{
-		Scheme: scheme.Scheme,
+		Scheme: testScheme,
 		// Explicitly disable metrics server to avoid port conflicts
 		Metrics: metricsserver.Options{
 			BindAddress: "0", // Let OS assign a free port
