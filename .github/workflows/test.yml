@@ -1,0 +1,83 @@
+name: Plexaubnet Tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    name: Plexaubnet Tests (Go 1.24)
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+
+    steps:
+    - name: Check out code
+      uses: actions/checkout@v4
+
+    - name: Set up Go 1.24.2
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.24.2'
+        check-latest: true
+        cache: true
+
+    - name: Install setup-envtest and download binaries
+      id: setup-envtest
+      run: |
+        go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
+        ENVTEST_VERSION=1.32
+        echo "KUBEBUILDER_ASSETS=$(setup-envtest use ${ENVTEST_VERSION} -p path)" >> $GITHUB_ENV
+
+    - name: Run tests
+      run: |
+        make test
+      env:
+        KUBEBUILDER_ASSETS: ${{ env.KUBEBUILDER_ASSETS }}
+
+    - name: Run tests with race detector
+      run: |
+        make test-race
+      env:
+        KUBEBUILDER_ASSETS: ${{ env.KUBEBUILDER_ASSETS }}
+
+    - name: Generate coverage report
+      run: |
+        make coverage
+      env:
+        KUBEBUILDER_ASSETS: ${{ env.KUBEBUILDER_ASSETS }}
+
+    - name: Check coverage threshold
+      run: |
+        # Get total coverage
+        COVERAGE=$(go tool cover -func=coverage.out | grep total: | awk '{print $3}' | sed 's/%//')
+        echo "Total coverage: ${COVERAGE}%"
+        
+        # Compare with threshold (60%)
+        THRESHOLD=60
+        if (( $(echo "$COVERAGE < $THRESHOLD" | awk '{print ($1 < $3)}') )); then
+          echo "Error: Coverage ${COVERAGE}% is below the threshold of ${THRESHOLD}%"
+          exit 1
+        fi
+        
+        echo "Coverage check passed: ${COVERAGE}% >= ${THRESHOLD}%"
+
+    - name: Upload coverage report
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-report-${{ matrix.os }}
+        path: coverage.html
+        if-no-files-found: error
+
+    - name: Check for flaky tests
+      run: |
+        echo "::notice::Running flaky test detection..."
+        # Using -count=5 to detect timing dependencies in asynchronous tests
+        # If errors occur, it's recommended to create a GitHub issue for flaky tests
+        go test -count=5 ./internal/controller/... || echo "::warning::Potential flaky tests detected, consider creating a GitHub issue"
+      env:
+        KUBEBUILDER_ASSETS: ${{ env.KUBEBUILDER_ASSETS }}
