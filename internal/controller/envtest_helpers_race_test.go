@@ -7,7 +7,8 @@ import (
 	"context"
 	"testing"
 
-	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/apimachinery/pkg/runtime"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -19,10 +20,16 @@ import (
 
 // setupEnvTest sets up a controller-runtime envtest environment and registers the CRDs.
 // This duplicate implementation is compiled only when `-race` is enabled (build tag `race`).
-func setupEnvTest(t *testing.T) *envtest.Environment {
+func setupEnvTest(t *testing.T) (*envtest.Environment, *runtime.Scheme) {
 	t.Helper()
+
+	// Create a private scheme for this test to avoid race conditions
+	testScheme := runtime.NewScheme()
+	utilruntime.Must(ipamv1.AddToScheme(testScheme))
+
 	testEnv := &envtest.Environment{
 		CRDDirectoryPaths: []string{"../../config/crd/bases"},
+		Scheme:            testScheme, // Use our private scheme
 	}
 
 	cfg, err := testEnv.Start()
@@ -34,11 +41,10 @@ func setupEnvTest(t *testing.T) *envtest.Environment {
 	cfg.QPS = 200   // uplift default 5
 	cfg.Burst = 400 // uplift default 10
 
-	if err := ipamv1.AddToScheme(scheme.Scheme); err != nil {
-		t.Fatalf("Error adding scheme: %v", err)
-	}
+	// Note: we don't need to call ipamv1.AddToScheme(scheme.Scheme) anymore
+	// since the types are already registered in our private scheme
 
-	return testEnv
+	return testEnv, testScheme
 }
 
 // stopEnvTest terminates the envtest environment.
@@ -50,14 +56,14 @@ func stopEnvTest(t *testing.T, testEnv *envtest.Environment) {
 }
 
 // createK8sClient constructs a controller-runtime client using the provided rest.Config.
-func createK8sClient(cfg *rest.Config) (client.Client, error) {
-	return client.New(cfg, client.Options{Scheme: scheme.Scheme})
+func createK8sClient(cfg *rest.Config, s *runtime.Scheme) (client.Client, error) {
+	return client.New(cfg, client.Options{Scheme: s})
 }
 
 // setupManager creates a controller-runtime manager for tests with metrics & probes disabled.
-func setupManager(cfg *rest.Config) (ctrl.Manager, error) {
+func setupManager(cfg *rest.Config, s *runtime.Scheme) (ctrl.Manager, error) {
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
-		Scheme: scheme.Scheme,
+		Scheme: s, // Use the provided private scheme
 		Metrics: metricsserver.Options{
 			BindAddress: "0", // Disable metrics server
 		},
