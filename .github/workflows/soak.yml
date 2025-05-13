@@ -1,0 +1,143 @@
+name: Soak & Load Testing
+
+# Prevent multiple instances of the same workflow from running simultaneously
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false  # Don't cancel but prevent parallel execution for long-running tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      soak:
+        description: 'Run full 24h soak test'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+        default: 'false'
+        required: false
+  schedule:
+    - cron: '0 18 * * *'  # UTC 18:00 (JST 03:00)
+
+jobs:
+  smoke-test:
+    name: Smoke Test (5min)
+    runs-on: ubuntu-latest
+    # Run on manual workflow dispatch without soak parameter set to true
+    if: github.event_name == 'workflow_dispatch' && inputs.soak != 'true'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go and Envtest
+        id: setup-envtest
+        uses: ./.github/actions/setup-go-envtest
+        with:
+          go-version: '1.24.2'
+          envtest-version: '1.32'
+
+      - name: Setup K6 and Kind
+        uses: ./.github/actions/setup-k6-kind
+        with:
+          kind-version: 'v0.27.0'
+
+      - name: Run smoke test (5min)
+        run: |
+          mkdir -p logs/heap_dumps
+          SMOKE=true scripts/run_soak.sh
+        env:
+          KUBEBUILDER_ASSETS: ${{ steps.setup-envtest.outputs.envtest_assets }}
+
+      - name: Upload logs
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-test-logs
+          path: logs/
+          if-no-files-found: warn
+
+  soak-test-nightly:
+    name: Soak Test Nightly (15min)
+    runs-on: ubuntu-latest
+    # Run only on scheduled events
+    if: github.event_name == 'schedule'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go and Envtest
+        id: setup-envtest
+        uses: ./.github/actions/setup-go-envtest
+        with:
+          go-version: '1.24.2'
+          envtest-version: '1.32'
+
+      - name: Setup K6 and Kind
+        uses: ./.github/actions/setup-k6-kind
+        with:
+          kind-version: 'v0.27.0'
+
+      - name: Run soak test (15min)
+        run: |
+          mkdir -p logs/heap_dumps
+          DURATION=15m scripts/run_soak.sh
+        env:
+          KUBEBUILDER_ASSETS: ${{ steps.setup-envtest.outputs.envtest_assets }}
+
+      - name: Upload logs
+        uses: actions/upload-artifact@v4
+        with:
+          name: soak-test-logs-nightly
+          path: logs/
+          if-no-files-found: warn
+
+      - name: Upload heap dumps
+        uses: actions/upload-artifact@v4
+        with:
+          name: heap-dumps-nightly
+          path: logs/heap_dumps/
+          if-no-files-found: warn
+
+  soak-test-full:
+    name: Full Soak Test (24h)
+    runs-on: ubuntu-latest
+    # Only run when manually triggered and soak parameter is true
+    if: github.event_name == 'workflow_dispatch' && inputs.soak == 'true'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go and Envtest
+        id: setup-envtest
+        uses: ./.github/actions/setup-go-envtest
+        with:
+          go-version: '1.24.2'
+          envtest-version: '1.32'
+
+      - name: Setup K6 and Kind
+        uses: ./.github/actions/setup-k6-kind
+        with:
+          kind-version: 'v0.27.0'
+
+      - name: Run full soak test (24h)
+        run: |
+          mkdir -p logs/heap_dumps
+          SOAK=true scripts/run_soak.sh
+        env:
+          KUBEBUILDER_ASSETS: ${{ steps.setup-envtest.outputs.envtest_assets }}
+
+      - name: Upload logs
+        uses: actions/upload-artifact@v4
+        with:
+          name: soak-test-logs-full
+          path: logs/
+          if-no-files-found: warn
+
+      - name: Upload heap dumps
+        uses: actions/upload-artifact@v4
+        with:
+          name: heap-dumps-full
+          path: logs/heap_dumps/
+          if-no-files-found: warn

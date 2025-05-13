@@ -1,0 +1,44 @@
+name: 'Setup Go and Envtest'
+description: 'Sets up Go environment and controller-runtime envtest'
+
+inputs:
+  go-version:
+    description: 'Go version to use'
+    required: false
+    default: '1.24.2'
+  envtest-version:
+    description: 'Envtest Kubernetes version'
+    required: false
+    default: '1.32'
+
+outputs:
+  envtest_assets:
+    description: 'Path to the envtest assets'
+    value: ${{ steps.setup-envtest.outputs.envtest_assets }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: ${{ inputs.go-version }}
+        check-latest: true
+        cache: true
+
+    - name: Cache envtest binaries
+      uses: actions/cache@v4
+      id: envtest-cache
+      with:
+        path: ~/.local/share/kubebuilder-envtest/${{ inputs.envtest-version }}
+        key: envtest-${{ inputs.envtest-version }}
+
+    - name: Install setup-envtest and download binaries
+      id: setup-envtest
+      shell: bash
+      run: |
+        go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
+        ENVTEST_VERSION=${{ inputs.envtest-version }}
+        ENVTEST_PATH=$(setup-envtest use ${ENVTEST_VERSION} -p path)
+        echo "KUBEBUILDER_ASSETS=${ENVTEST_PATH}" >> $GITHUB_ENV
+        echo "envtest_assets=${ENVTEST_PATH}" >> $GITHUB_OUTPUT

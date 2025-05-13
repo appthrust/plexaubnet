@@ -1,0 +1,56 @@
+name: Race Detection
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  race-test:
+    name: Race Detector
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [amd64, arm64]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go and Envtest
+        id: setup-envtest
+        uses: ./.github/actions/setup-go-envtest
+        with:
+          go-version: '1.24.2'
+          envtest-version: '1.32'
+
+      - name: Run tests with race detector (amd64)
+        if: matrix.arch == 'amd64'
+        run: |
+          make test-race
+        env:
+          KUBEBUILDER_ASSETS: ${{ steps.setup-envtest.outputs.envtest_assets }}
+
+      - name: Build for arm64 (optimized)
+        if: matrix.arch == 'arm64'
+        run: |
+          echo "Static analysis and minimal compilation for linux/arm64"
+          # Static analysis only to check for basic errors
+          GOOS=linux GOARCH=arm64 go vet ./...
+          
+          # Generate minimal binaries without linking (no actual test execution)
+          # -run=^$ indicates that no tests will be executed
+          GOOS=linux GOARCH=arm64 go test -run=^$ -c ./internal/controller
+          GOOS=linux GOARCH=arm64 go test -run=^$ -c ./api/...
+        env:
+          KUBEBUILDER_ASSETS: ${{ steps.setup-envtest.outputs.envtest_assets }}
+
+      - name: Upload coverage
+        if: matrix.arch == 'amd64'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-race-linux-amd64
+          path: coverage.out
+          if-no-files-found: warn
