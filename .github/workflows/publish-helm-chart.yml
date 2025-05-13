@@ -13,8 +13,9 @@ jobs:
     name: Package & Publish Helm Chart
     runs-on: ubuntu-latest
 
+    # Allow pushing to gh-pages
     permissions:
-      contents: read  # For actions/checkout
+      contents: write  # Required for peaceiris/actions-gh-pages to push
 
     steps:
       - name: "Checkout source"
