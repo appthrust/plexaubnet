@@ -25,4 +25,28 @@ entries:
     urls:
     - https://appthrust.github.io/plexaubnet/plexaubnet-0.1.2.tgz
     version: 0.1.2
-generated: "2025-05-13T04:14:54.514241301Z"
+  - apiVersion: v2
+    appVersion: v0.5.0
+    created: "2025-05-13T04:44:39.398049976Z"
+    description: A Helm chart for deploying the Plexaubnet (CIDR Operator) controller
+      to Kubernetes clusters.
+    digest: 929598ceb085a4c9595801b44106680043b5fb1718ac406e02a55b59cba91d56
+    home: https://github.com/appthrust/plexaubnet
+    keywords:
+    - ipam
+    - cidr
+    - kubernetes-operator
+    - plexaubnet
+    - aquanaut
+    maintainers:
+    - email: opensource@appthrust.io
+      name: Plexaubnet OSS Team
+      url: https://github.com/appthrust
+    name: plexaubnet
+    sources:
+    - https://github.com/appthrust/plexaubnet
+    type: application
+    urls:
+    - https://appthrust.github.io/plexaubnet/plexaubnet-0.1.0.tgz
+    version: 0.1.0
+generated: "2025-05-13T04:44:39.397446678Z"
