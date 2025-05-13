@@ -2,10 +2,8 @@ name: Publish Helm Chart
 
 on:
   push:
-    branches: [ main, feat-helm-charts ]
-    paths:
-      - "charts/plexaubnet/**"
-      - "charts/plexaubnet/Chart.yaml"
+    tags:
+      - 'v*.*.*'            # タグ push (例: v1.2.3) でのみ実行
   workflow_dispatch: {}
 
 jobs:
@@ -28,11 +26,26 @@ jobs:
         with:
           version: v3.14.3
 
+      # タグ push (refs/tags/vX.Y.Z) 時はバージョン文字列を取り出して環境変数 VERSION に設定
+      - name: "Extract version from tag"
+        if: startsWith(github.ref, 'refs/tags/')
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_ENV
+
       - name: "Package chart"
         run: |
+          set -e
           helm lint charts/plexaubnet
           mkdir -p _dist
-          helm package charts/plexaubnet --destination _dist
+          if [ -n "${VERSION:-}" ]; then
+            echo "Packaging chart with version $VERSION"
+            helm package charts/plexaubnet \
+              --version "$VERSION" \
+              --app-version "$VERSION" \
+              --destination _dist
+          else
+            echo "Packaging chart with Chart.yaml version (no tag detected)"
+            helm package charts/plexaubnet --destination _dist
+          fi
 
       - name: "Prepare repo directory"
         run: |
@@ -57,4 +70,4 @@ jobs:
           # Disable Jekyll on GitHub Pages so Liquid parsing errors in Markdown do not break the deployment
           enable_jekyll: false
           user_name: github-actions[bot]
-          user_email: github-actions[bot]@users.noreply.github.com 
+          user_email: github-actions[bot]@users.noreply.github.com
