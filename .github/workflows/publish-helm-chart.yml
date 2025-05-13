@@ -53,5 +53,7 @@ jobs:
           publish_branch: gh-pages
           publish_dir: repo
           keep_files: true
+          # Disable Jekyll on GitHub Pages so Liquid parsing errors in Markdown do not break the deployment
+          enable_jekyll: false
           user_name: github-actions[bot]
           user_email: github-actions[bot]@users.noreply.github.com 
