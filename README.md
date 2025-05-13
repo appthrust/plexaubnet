@@ -3,7 +3,7 @@
 Declarative CIDR Management Operator for Multi-Cluster Kubernetes v1.30+
 
 <!-- Badges -->
-[![CI](https://github.com/appthrust/plexaubnet/actions/workflows/ci.yaml/badge.svg)](https://github.com/appthrust/plexaubnet/actions) ![Go Report Card](https://goreportcard.com/badge/github.com/appthrust/plexaubnet) ![License](https://img.shields.io/github/license/appthrust/plexaubnet)
+[![CI](https://github.com/appthrust/plexaubnet/actions/workflows/test.yml/badge.svg)](https://github.com/appthrust/plexaubnet/actions/workflows/test.yml) ![Go Report Card](https://goreportcard.com/badge/github.com/appthrust/plexaubnet) ![License](https://img.shields.io/github/license/appthrust/plexaubnet)
 
 ---
 
