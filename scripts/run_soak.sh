@@ -59,6 +59,7 @@ fi
 echo "📂 Creating log directory..."
 mkdir -p ${LOG_DIR}
 mkdir -p ${LOG_DIR}/heap
+mkdir -p output  # Ensure output directory exists for reports
 
 # Log file
 LOG_FILE="${LOG_DIR}/soak-test-$(date +%Y%m%d-%H%M%S).log"
