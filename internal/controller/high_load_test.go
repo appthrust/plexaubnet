@@ -32,7 +32,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -45,9 +44,8 @@ import (
 
 // Helper function to set up the test environment
 func setupEnvTest(t *testing.T) (*envtest.Environment, *runtime.Scheme) {
-	// Create a private scheme for this test to avoid race conditions
-	testScheme := runtime.NewScheme()
-	utilruntime.Must(ipamv1.AddToScheme(testScheme))
+	// Use helper to create private scheme with all required types
+	testScheme := NewTestScheme()
 
 	testEnv := &envtest.Environment{
 		CRDDirectoryPaths: []string{"../../config/crd/bases"},

@@ -29,9 +29,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -93,9 +91,8 @@ func TestMain(m *testing.M) {
 
 	// Start envtest environment
 	fmt.Println("Parent Pool Integration Test: Setting up envtest environment...")
-	// Create a private scheme for this test suite to avoid race conditions
-	testScheme := runtime.NewScheme()
-	utilruntime.Must(ipamv1.AddToScheme(testScheme))
+	// Use common helper to create private scheme with all required types
+	testScheme := NewTestScheme()
 
 	parentPoolTestEnv = &envtest.Environment{
 		CRDDirectoryPaths:     []string{filepath.Join("..", "..", "config", "crd", "bases")},

@@ -8,14 +8,11 @@ import (
 	"testing"
 
 	"k8s.io/apimachinery/pkg/runtime"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
-
-	ipamv1 "github.com/appthrust/plexaubnet/api/v1alpha1"
 )
 
 // setupEnvTest sets up a controller-runtime envtest environment and registers the CRDs.
@@ -23,9 +20,8 @@ import (
 func setupEnvTest(t *testing.T) (*envtest.Environment, *runtime.Scheme) {
 	t.Helper()
 
-	// Create a private scheme for this test to avoid race conditions
-	testScheme := runtime.NewScheme()
-	utilruntime.Must(ipamv1.AddToScheme(testScheme))
+	// Use the common helper function to create a private scheme
+	testScheme := NewTestScheme()
 
 	testEnv := &envtest.Environment{
 		CRDDirectoryPaths: []string{"../../config/crd/bases"},
