@@ -1,0 +1,54 @@
+name: Auto Increment Tag
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  increment-tag:
+    name: Create git tag with incremented patch version
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: "Checkout source"
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: "Get latest tag and calculate next tag"
+        id: next-tag
+        run: |
+          # 最新の vX.Y.Z 形式のタグを取得
+          LAST_TAG=$(git tag --list --sort=-v:refname 'v[0-9]*.[0-9]*.[0-9]*' | head -n1)
+          
+          # 最初のタグの場合は v0.0.0 とみなす
+          if [[ -z "$LAST_TAG" ]]; then
+            LAST_TAG="v0.0.0"
+            echo "No tags found, starting with $LAST_TAG"
+          else
+            echo "Latest tag: $LAST_TAG"
+          fi
+          
+          # 次のパッチバージョンを計算
+          IFS='.' read -r MAJOR MINOR PATCH <<<"${LAST_TAG#v}"
+          PATCH=$((PATCH + 1))
+          NEXT_TAG="v${MAJOR}.${MINOR}.${PATCH}"
+          
+          echo "Calculated next tag: $NEXT_TAG"
+          echo "NEXT_TAG=$NEXT_TAG" >> $GITHUB_ENV
+
+      - name: "Create and push tag (if needed)"
+        run: |
+          echo "Will create tag $NEXT_TAG if it does not exist"
+          if git rev-parse "$NEXT_TAG" >/dev/null 2>&1; then
+            echo "Tag $NEXT_TAG already exists. Skipping."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "$NEXT_TAG" -m "Release $NEXT_TAG"
+          git push origin "$NEXT_TAG"
